@@ -1,60 +1,29 @@
-[
-{"nickname": "matildas",
-"sports": "women's soccer"},
-{"nickname": "wallabies",
-"sports": "men's rugby union"},
-{"nickname": "wallaroos",
-"sports": "women's rugby union"},
-{"nickname": "kangaroos",
-"sports": "men's rugby league"},
-{"nickname": "jillaroos",
-"sports": "women's rugby union"},
-{"nickname": "socceroos",
-"sports": "men's soccer"},
-{"nickname": "olyroos",
-"sports": "men's olympic soccer"},
-{"nickname": "futsalroos",
-"sports": "men's futsal"},
-{"nickname": "diamonds",
-"sports": "netball"},
-{"nickname": "baggy greens",
-"sports": "cricket"},
-{"nickname": "dolphins",
-"sports": "swimming"},
-{"nickname": "sharks",
-"sports": "men's water polo"},
-{"nickname": "stingers",
-"sports": "men's water polo"},
-{"nickname": "boomers",
-"sports": "men's basketball"},
-{"nickname": "opals",
-"sports": "women's basketball"},
-{"nickname": "crocs",
-"sports": "men's u-21 basketball"},
-{"nickname": "sapphires",
-"sports": "women's u-21 basketball"},
-{"nickname": "cyclones",
-"sports": "cycling"},
-{"nickname": "hockeyroos",
-"sports": "women's field hockey"},
-{"nickname": "kookaburras",
-"sports": "men's field hockey"},
-{"nickname": "mighty roos",
-"sports": "men's ice hockey"},
-{"nickname": "mighty jills",
-"sports": "women's ice hockey"},
-{"nickname": "boxaroos",
-"sports": "box lacrosse"},
-{"nickname": "crocodiles",
-"sports": "men's handball"},
-{"nickname": "redbacks",
-"sports": "women's handball"},
-{"nickname": "cockatoos",
-"sports": "tennis"},
-{"nickname": "volleyroos",
-"sports": "volleyball"},
-{"nickname": "southern thunder",
-"sports": "men's baseball"},
-{"nickname": "emeralds",
-"sports": "men's baseball"}
-]
+matildas - soccer - women
+wallabies - rugby_union - men
+wallaroos - rugby_union - women
+kangaroos - nrl - men
+jillaroos - rugby_union - women
+socceroos - soccer - men
+olyroos - olympic_soccer - men
+futsalroos - futsal - men
+diamonds - netball - women
+baggy greens - cricket - men
+dolphins - swimming - men
+sharks - water_polo - men
+stingers - water_polo - men
+boomers - basketball - men
+opals - basketball - women
+crocs - u21_basketball - men"
+sapphires - u21_basketball - women
+cyclones - cycling - men
+hockeyroos - field_hockey - women
+kookaburras - field_hockey - men
+mighty roos - ice_hockey - men
+mighty jills - ice_hockey" - women
+boxaroos - box_lacrosse - women
+crocodiles - handball - men
+redbacks - handball - women
+cockatoos - tennis - men
+volleyroos - volleyball - men
+southern thunder - baseball - men
+emeralds - baseball - men
