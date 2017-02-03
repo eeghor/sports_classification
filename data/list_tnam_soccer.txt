@@ -1,0 +1,7 @@
+tnam_england_championship.txt
+tnam_england_premier_league.txt
+tnam_australia_aleague.txt
+tnam_scotland_premiership.txt
+tnam_usa_mls.txt
+tnam_australia_npl.txt
+tnam_japan_j1.txt
