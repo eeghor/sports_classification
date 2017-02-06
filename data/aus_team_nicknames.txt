@@ -1,29 +1,29 @@
-matildas - soccer - women
-wallabies - rugby_union - men
-wallaroos - rugby_union - women
-kangaroos - nrl - men
-jillaroos - rugby_union - women
-socceroos - soccer - men
-olyroos - olympic_soccer - men
-futsalroos - futsal - men
-diamonds - netball - women
-baggy greens - cricket - men
-dolphins - swimming - men
-sharks - water_polo - men
-stingers - water_polo - men
-boomers - basketball - men
-opals - basketball - women
-crocs - u21_basketball - men"
-sapphires - u21_basketball - women
-cyclones - cycling - men
-hockeyroos - field_hockey - women
-kookaburras - field_hockey - men
-mighty roos - ice_hockey - men
-mighty jills - ice_hockey" - women
-boxaroos - box_lacrosse - women
-crocodiles - handball - men
-redbacks - handball - women
-cockatoos - tennis - men
-volleyroos - volleyball - men
-southern thunder - baseball - men
-emeralds - baseball - men
+matildas - soccer
+wallabies - rugby_union
+wallaroos - rugby_union
+kangaroos - nrl
+jillaroos - rugby_union
+socceroos - soccer
+olyroos - olympic_soccer
+futsalroos - futsal
+diamonds - netball
+baggy greens - cricket
+dolphins - swimming
+sharks - water_polo
+stingers - water_polo
+boomers - basketball
+opals - basketball
+crocs - u21_basketball
+sapphires - u21_basketball
+cyclones - cycling
+hockeyroos - field_hockey
+kookaburras - field_hockey
+mighty roos - ice_hockey
+mighty jills - ice_hockey"
+boxaroos - box_lacrosse
+crocodiles - handball
+redbacks - handball
+cockatoos - tennis
+volleyroos - volleyball
+southern thunder - baseball
+emeralds - baseball
