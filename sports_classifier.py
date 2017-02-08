@@ -39,7 +39,7 @@ def run_and_time(method):
 		if t_elapsed < 60:
 			form_str = "{} elapsed time {:.2f} s".format(u"\u2713", t_elapsed)
 		else:
-			form_str = "{} elapsed time {:.0f} m {:.0} s".format(u"\u2713", t_elapsed//60, t_elapsed%60)
+			form_str = "{} elapsed time {:.0f} m {:.0f} s".format(u"\u2713", t_elapsed//60, t_elapsed%60)
 		print(form_str)
 	return wrap_func
 
@@ -370,8 +370,12 @@ class SportsClassifier(object):
 
 	def normalize_df(self, df):
 
-		for col in ['event']:
-			df[col] = df[col].apply(lambda x: self.normalize_string(x))		
+		# do don't do much to the event column, just make it lower case
+
+		df["venue"] = df["venue"].str.lower()
+
+		# process the event column
+		df['event'] = df['event'].apply(lambda x: self.normalize_string(x))		
 
 		return df
 
