@@ -21,10 +21,27 @@ from sklearn.decomposition import PCA
 import progressbar
 # see https://pypi.python.org/pypi/multiprocessing_on_dill
 from multiprocessing_on_dill import Pool
+#from functools import wraps
 #from pathos.multiprocessing import ProcessingPool
 #import jellyfish
 
 from sklearn.model_selection import train_test_split
+
+def run_and_time(method):
+
+	#@wraps(method)
+	
+	def wrap_func(self,*method_args):
+		t_start = time.time()
+		method(self,*method_args)
+		t_end = time.time()
+		t_elapsed = t_end-t_start  # in seconds
+		if t_elapsed < 60:
+			form_str = "{} elapsed time {:.2f} s".format(u"\u2713", t_elapsed)
+		else:
+			form_str = "{} elapsed time {:.0f} m {:.0} s".format(u"\u2713", t_elapsed//60, t_elapsed%60)
+		print(form_str)
+	return wrap_func
 
 
 class SportsClassifier(object):
@@ -98,17 +115,17 @@ class SportsClassifier(object):
 			print(msg + "...{}...ok".format(len(lst)))
 			return frozenset(lst)
 
-	def run_and_time(self, *argv):
+	# def run_and_time(self, *argv):
 
-		t_start = time.time()
-		def wrap_func(some_function):
-			return some_function(*argv)
-		return wrap_func
+	# 	t_start = time.time()
+	# 	def wrap_func(some_function):
+	# 		return some_function(*argv)
+	# 	return wrap_func
 
 
+	@run_and_time
 	def read_data(self):
 
-		
 		print("[reading data]")
 
 		self.AUS_THEATRE_COMPANIES = self.__read2list("theatre_companies_australia.txt", "australian theatre companies")
@@ -239,12 +256,15 @@ class SportsClassifier(object):
 		#self.PCT_TRAIN = 0.70  # percentage of soccer/non-soccer for training
 
 
-
+	@run_and_time
 	def create_train_test(self):
 		"""
 		split into the training and teating sets; the 
 
 		"""
+
+		print("[creating the training and testing sets]")
+
 		self.train_nofeatures, self.test_nofeatures, self.y_train, self.y_test = train_test_split(self.data_df.loc[:, "event venue month weekday hour".split()], self.data_df.sport, test_size=0.3, 
 																stratify = self.data_df.sport, random_state=113)
 		
@@ -297,7 +317,6 @@ class SportsClassifier(object):
 		[ulist.append(w) for w in st.split() if w not in ulist]  # note that comprehension or not, ulist grows
 
 		return " ".join(ulist)
-
 
 	def normalize_string(self, st):
 		
@@ -368,9 +387,10 @@ class SportsClassifier(object):
    		return df
 
 
+	@run_and_time
 	def normalize_data(self, df, k="training"):
 
-		print("---> normalising " + k + " data --->")
+		print("[normalising {} data]".format(k))
 
 		# for col in ['event']:
 		# 	df = df.iloc[:200,:]
@@ -599,7 +619,6 @@ if __name__ == '__main__':
 	t0 = time.time()
 	cl.train_nofeatures = cl.normalize_data(cl.train_nofeatures)
 	t1 = time.time()
-	print("normalisation took {} minutes".format(round((t1-t0)/60,1)))
 
 	sys.exit()
 
