@@ -19,7 +19,7 @@ import dill as pickle
 from sklearn import svm
 from sklearn.decomposition import PCA
 import progressbar
-#import multiprocessing_on_dill as multiprocessing
+# see https://pypi.python.org/pypi/multiprocessing_on_dill
 from multiprocessing_on_dill import Pool
 #from pathos.multiprocessing import ProcessingPool
 #import jellyfish
@@ -98,12 +98,23 @@ class SportsClassifier(object):
 			print(msg + "...{}...ok".format(len(lst)))
 			return frozenset(lst)
 
+	def run_and_time(self, *argv):
+
+		t_start = time.time()
+		def wrap_func(some_function):
+			return some_function(*argv)
+		return wrap_func
+
+
 	def read_data(self):
+
+		
+		print("[reading data]")
 
 		self.AUS_THEATRE_COMPANIES = self.__read2list("theatre_companies_australia.txt", "australian theatre companies")
 		self.AUS_OPERA_COMPANIES = self.__read2list("opera_companies_australia.txt", "australian opera companies")
-		self.NAMES_M = self.__read2list("names_m_10k.txt", "male names")
-		self.NAMES_F = self.__read2list("names_f_10k.txt", "female names")
+		self.NAMES_M = self.__read2list("names_m_5k.txt", "male names")
+		self.NAMES_F = self.__read2list("names_f_5k.txt", "female names")
 		self.STPW = self.__read2list("english_stopwords.txt", "english stopwords")
 		# australian suburb/city list (by Australia Post, Sep 2016)
 		self.AUS_SUBURBS = self.__read2list("aus_suburbs.txt", "australian suburbs")
@@ -253,28 +264,61 @@ class SportsClassifier(object):
 
 			# nonlocal st
 
-			for s in lst:
-				if (len(s.split()) > min_words - 1) or ("-" in s):  # if there are at least min_words in this name from list..
-					st = re.sub("(?<!\w)" + s.lower() + "(?!\w+)", lab, st)
+			c = set([v for w in lst for v in w.split()]) & set(st.split())
+
+			# print("st.split()=",st.split())
+			# print("set(lst)=",set(lst))
+			# print("c=",c)
+
+			if c:
+				for s in c:
+					for l in lst:
+						if l.startswith(s):  # there is a chance..
+
+							if (l in st) and ((len(l.split()) > min_words - 1) or ("-" in l)):
+								st = st.replace(l,lab)
+							else:
+								pass
+						else:
+							pass
+			else:
+				pass
 
 			return st
+
+			# for s in lst:
+			# 	if (len(s.split()) > min_words - 1) or ("-" in s):  # if there are at least min_words in this name from list..
+			# 		#st = re.sub("(?<!\w)" + s.lower() + "(?!\w+)", lab, st)
+			# 		st = [w for w in st.split() if s not in ]
+			# return st
+	def __remove_duplicates_from_string(self, st):
+		
+		ulist = []
+		[ulist.append(w) for w in st.split() if w not in ulist]  # note that comprehension or not, ulist grows
+
+		return " ".join(ulist)
 
 
 	def normalize_string(self, st):
 		
 		# make the string lower case, strip and replace all multiple white spaces with a single white space	
-		st = re.sub(r"\s+"," ",st.lower().strip()) 
+		# st = re.sub(r"\s+"," ",st.lower().strip())
+		st = " ".join([t for t in [w.strip(".,:;") for w in st.lower().split()] if len(t) > 1])
 			
 		# merge letters like f.c. -> fc or f c. -> fc
 		#st = [for w in st.split()]
-		st = re.sub(r"(?<!\w)(\w{1})[.\s]{1,2}(\w{1})[.\s]{1}", r"\1\2", st)  
+		#st = re.sub(r"(?<!\w)(\w{1})[.\s]{1,2}(\w{1})[.\s]{1}", r"\1\2", st)  
+		# by now st only has single white spaces, e.g. a f c sydney game
+		#st = [st.split()]
+		
+		st = self.__remove_duplicates_from_string(st)
 
 		# remove all numbers or non-alphanumeric characters if they aren't part of word
-		st = re.sub(r"(?<!\w)[\d\W](?!\w+)","",st)
+		# st = re.sub(r"(?<!\w)[\d\W](?!\w+)","",st)
 		
 		for sport in self.team_names:
 			for comp in self.team_names[sport]:
-				st = self.__prelabel_from_list(st, self.team_names[sport][comp], "_" + sport.upper() + "_TEAM_NAME_", 2)
+				st = self.__prelabel_from_list(st, self.team_names[sport][comp], "_" + sport.upper() + "_TEAM_", 2)
 
 		for sport in self.comp_names:
 			st = self.__prelabel_from_list(st, self.comp_names[sport], "_" + sport.upper() + "_COMPETITION_", 2)
@@ -286,6 +330,7 @@ class SportsClassifier(object):
 		st = self.__prelabel_from_list(st, self.AUS_THEATRE_COMPANIES, "_THEATRE_COMPANY_", 2)
 		st = self.__prelabel_from_list(st, self.AUS_OPERA_COMPANIES, "_OPERA_COMPANY_", 2)
 		st = self.__prelabel_from_list(st, self.COUNTRIES, "_COUNTRY_", 1)
+		st = self.__prelabel_from_list(st, self.AUS_SUBURBS, "_AUS_SUB_CITY_", 1)
 
 		st = self.__prelabel_from_list(st, self.PERFORMERS, "_ARTIST_", 2)
 		
@@ -331,7 +376,7 @@ class SportsClassifier(object):
 		# 	df = df.iloc[:200,:]
 		# 	df[col] = df[col].apply(lambda x: self.normalize_string(x))	
 
-		df = self.parallelize_dataframe(df.iloc[:200,:], self.normalize_df)	
+		df = self.parallelize_dataframe(df, self.normalize_df)	
 		
 		if k == "training":
 
