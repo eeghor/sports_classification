@@ -43,7 +43,7 @@ bobbie lewis quality
 bow mistress trophy
 brc sprint
 breeders classic
-breeders' stakes (sajc)
+breeders' stakes
 brisbane cup
 btc cup
 c f orr stakes
@@ -52,19 +52,17 @@ cameron handicap
 canonbury stakes
 canterbury stakes
 cape grim beef steaks
-carbine club stakes (atc)
-carbine club stakes (vrc)
+carbine club stakes
 caulfield autumn classic
 caulfield cup
 caulfield guineas
 caulfield guineas prelude
 caulfield sprint
-chairman's handicap (atc)
-chairman's stakes (mrc)
-chairman's stakes (sajc)
+chairman's handicap
+chairman's stakes
 champagne classic
 challenge stakes
-champagne stakes (atc)
+champagne stakes
 chelmsford stakes
 chipping norton stakes
 colgate optic white stakes
@@ -137,8 +135,7 @@ hyperion stakes
 inglis sires'
 james h b carr stakes
 japan racing association plate
-jra cup (brc)
-jra cup (mvrc)
+jra cup
 karrakatta plate
 kevin hayes stakes
 ken russell memorial classic
@@ -182,7 +179,7 @@ mrc foundation cup
 myer classic
 n e manion cup
 mannerism stakes
-national stakes (sajc)
+national stakes
 neville sellwood stakes
 newcastle gold cup
 newcastle newmarket handicap
@@ -202,9 +199,8 @@ premier's cup
 prince of wales stakes
 proud miss stakes
 qtc cup
-queen elizabeth stakes (atc)
+queen elizabeth stakes
 queen of the south stakes
-queen elizabeth stakes (vrc)
 queen's cup
 queensland derby
 queensland guineas
@@ -238,16 +234,13 @@ silver shadow stakes
 silver slipper stakes
 sir john monash stakes
 sir rupert clarke stakes
-sires' produce stakes (brc)
-sires' produce stakes (sajc)
-sires' produce stakes (vrc)
-sires' produce stakes (wa)
+sires' produce stakes
 skyline stakes
 sky high stakes
 south australian derby
 southern cross stakes
 spring champion stakes
-spring stakes (sajc)
+spring stakes
 stan fox stakes
 standish handicap
 star kingdom stakes
