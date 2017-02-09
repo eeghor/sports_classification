@@ -7,8 +7,10 @@ eureka stadium
 the gabba
 manuka oval
 melbourne cricket ground
+mcg
 metricon stadium
 sydney cricket ground
+scg
 spotless stadium
 simonds stadium
 tio stadium

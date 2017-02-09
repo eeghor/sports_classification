@@ -6,6 +6,11 @@ from collections import defaultdict, Counter
 import time
 import random
 import math 
+
+"""
+scikit-learn
+"""
+
 from sklearn.svm import SVC
 from sklearn.linear_model import Lars
 from sklearn.metrics import accuracy_score
@@ -13,17 +18,17 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier
+
 import numpy as np
 import sys
 import dill as pickle
 from sklearn import svm
 from sklearn.decomposition import PCA
-import progressbar
+#import progressbar
 # see https://pypi.python.org/pypi/multiprocessing_on_dill
 from multiprocessing_on_dill import Pool
 #from functools import wraps
-#from pathos.multiprocessing import ProcessingPool
-#import jellyfish
+
 
 from sklearn.model_selection import train_test_split
 
@@ -31,9 +36,10 @@ def run_and_time(method):
 
 	#@wraps(method)
 	
-	def wrap_func(self,*method_args):
+	def wrap_func(self,*method_args,**kwargs):
 		t_start = time.time()
-		method(self,*method_args)
+		res = method(self,*method_args,**kwargs)
+		
 		t_end = time.time()
 		t_elapsed = t_end-t_start  # in seconds
 		if t_elapsed < 60:
@@ -41,6 +47,8 @@ def run_and_time(method):
 		else:
 			form_str = "{} elapsed time {:.0f} m {:.0f} s".format(u"\u2713", t_elapsed//60, t_elapsed%60)
 		print(form_str)
+		return res
+
 	return wrap_func
 
 
@@ -85,11 +93,14 @@ class SportsClassifier(object):
 		self.train_rare_words_file = self.TEMP_DATA_DIR  + "train_rare_words.txt"
 
 		self.data_df = pd.DataFrame()
-		self.train = pd.DataFrame()
+		self.train = pd.DataFrame()  # training data w features
+		self.test = pd.DataFrame()  # testing data w features
 
 		self.venue_names = defaultdict(lambda: defaultdict(list))
 		self.team_names = defaultdict(lambda: defaultdict(list))
+		self.team_name_words = defaultdict(list)
 		self.comp_names = defaultdict(list)
+		self.comp_name_words = defaultdict(list)
 
 		# dictionary to store words from the processed training data frame
 		self.train_dict = defaultdict(int)
@@ -184,21 +195,6 @@ class SportsClassifier(object):
 		self.data_df.to_csv(self.data_file, columns="event venue month weekday hour sport".split())
 		print("ok")
 
-		
-		# def __make_dict_of_words_by_sport(dic):
-
-		# 	no_comp_dic = defaultdict(list)
-
-		# 	for sport in dic:
-		# 		no_comp_dic[sport] = list(set([part_name.strip() for league in dic[sport] for w in dic[sport][league] for part_name in w.split() 
-		# 			if part_name.strip() not in self.STPW and len(part_name.strip()) > 2]))
-
-		# 	return no_comp_dic
-
-		# def __make_list_of_words(lst):
-
-		# 	return list(set([prt for w in lst for prt in w.split() if prt.strip() not in self.STPW and len(prt.strip()) > 2]))
-
 		"""
 		create a dict of team names like {'soccer': {'england_championship': ['brighton & hove albion', 'newcastle united', 'reading',..],
 											'australia_a_league': ['sydney fc', 'brisbane roar',..],..},
@@ -215,6 +211,16 @@ class SportsClassifier(object):
 							with open(self.DATA_DIR + fl.strip(), "r") as f:
 								self.team_names[team_sport][re.search("(?<=" + "tnam_" + ")\w+(?=.txt)",fl).group(0)] = \
 																			[line.strip() for line in f if line.strip()]
+		"""
+		create a dictionary of team name words: {"soccer": ["sydney", "fc", "united",..], "basketball": ["bullets",..]}
+
+		"""
+		for team_sport in self.team_sports:
+			for league in self.team_names[team_sport]:
+				self.team_name_words[team_sport] = list({w.strip() for team in self.team_names[team_sport][league] for w in team.split() if w not in self.STPW})
+
+		# print(self.team_name_words)
+
 		"""
 		create venue names just like the team names above
 		"""
@@ -241,28 +247,17 @@ class SportsClassifier(object):
 			if sport != "nonsport":
 				with open(self.DATA_DIR + "cnam_" + sport + ".txt","r") as f:
 					self.comp_names[sport] = [line.strip().lower() for line in f if line.strip()]
+
+		for sport in self.sports:
+			self.comp_name_words[sport] = list({w.strip() for comp in self.comp_names[sport]  for w in comp.split() if (w.strip() not in self.STPW) and len(w.strip()) > 2})
+
 	
-		#print(self.comp_names)
-
-		#self.team_names = __make_dict_by_sport_and_comp("tnam_")
-		#self.sport_words = __make_dict_of_words_by_sport(self.team_names)
-
-		# similarly, venue names
-		# self.venue_names = __make_dict_by_sport_and_comp("vnam_")
-		# self.venue_words = __make_dict_of_words_by_sport(self.venue_names)
-
-		#self.horse_racing_comp_words = __make_list_of_words(self.COMPS_HORSE_RACING)
-
-		#self.PCT_TRAIN = 0.70  # percentage of soccer/non-soccer for training
-
-
 	@run_and_time
 	def create_train_test(self):
 		"""
 		split into the training and teating sets; the 
 
 		"""
-
 		print("[creating the training and testing sets]")
 
 		self.train_nofeatures, self.test_nofeatures, self.y_train, self.y_test = train_test_split(self.data_df.loc[:, "event venue month weekday hour".split()], self.data_df.sport, test_size=0.3, 
@@ -282,13 +277,7 @@ class SportsClassifier(object):
 	
 	def __prelabel_from_list(self, st, lst,lab,min_words):
 
-			# nonlocal st
-
 			c = set([v for w in lst for v in w.split()]) & set(st.split())
-
-			# print("st.split()=",st.split())
-			# print("set(lst)=",set(lst))
-			# print("c=",c)
 
 			if c:
 				for s in c:
@@ -306,11 +295,6 @@ class SportsClassifier(object):
 
 			return st
 
-			# for s in lst:
-			# 	if (len(s.split()) > min_words - 1) or ("-" in s):  # if there are at least min_words in this name from list..
-			# 		#st = re.sub("(?<!\w)" + s.lower() + "(?!\w+)", lab, st)
-			# 		st = [w for w in st.split() if s not in ]
-			# return st
 	def __remove_duplicates_from_string(self, st):
 		
 		ulist = []
@@ -322,7 +306,7 @@ class SportsClassifier(object):
 		
 		# make the string lower case, strip and replace all multiple white spaces with a single white space	
 		# st = re.sub(r"\s+"," ",st.lower().strip())
-		st = " ".join([t for t in [w.strip(".,:;") for w in st.lower().split()] if len(t) > 1])
+		st = " ".join([t for t in [w.strip(",:;") for w in st.split()] if len(t) > 1])
 			
 		# merge letters like f.c. -> fc or f c. -> fc
 		#st = [for w in st.split()]
@@ -339,6 +323,11 @@ class SportsClassifier(object):
 			for comp in self.team_names[sport]:
 				st = self.__prelabel_from_list(st, self.team_names[sport][comp], "_" + sport.upper() + "_TEAM_", 2)
 
+		for n in self.AUS_TEAM_NICKS:
+			nick, sport = list(map(str.strip, n.split("-")))
+			st = self.__prelabel_from_list(st, [nick], "_" + sport.upper() + "_TEAM_", 1)
+
+
 		for sport in self.comp_names:
 			st = self.__prelabel_from_list(st, self.comp_names[sport], "_" + sport.upper() + "_COMPETITION_", 2)
 
@@ -349,7 +338,7 @@ class SportsClassifier(object):
 		st = self.__prelabel_from_list(st, self.AUS_THEATRE_COMPANIES, "_THEATRE_COMPANY_", 2)
 		st = self.__prelabel_from_list(st, self.AUS_OPERA_COMPANIES, "_OPERA_COMPANY_", 2)
 		st = self.__prelabel_from_list(st, self.COUNTRIES, "_COUNTRY_", 1)
-		st = self.__prelabel_from_list(st, self.AUS_SUBURBS, "_AUS_SUB_CITY_", 1)
+		st = self.__prelabel_from_list(st, self.AUS_SUBURBS, "_AUS_LOCATION_", 1)
 
 		st = self.__prelabel_from_list(st, self.PERFORMERS, "_ARTIST_", 2)
 		
@@ -365,14 +354,19 @@ class SportsClassifier(object):
 		# remove the multiple white spaces again
 		st = re.sub(r"\s+"," ",st)
 
-		return st
-
+		return st	
 
 	def normalize_df(self, df):
 
 		# do don't do much to the event column, just make it lower case
+		df["event"] = df["event"].str.lower().str.split().str.join(" ")
+		df["event"] = df["event"].str.replace("."," ")
 
-		df["venue"] = df["venue"].str.lower()
+		df["venue"] = df["venue"].str.lower().str.split().str.join(" ")
+		# not everything is lower case and with only 1 white space between words
+
+		# remove venue from event
+		df["event"] = [_event.replace(_venue,"") for _event, _venue in zip(df["event"],df["venue"])]
 
 		# process the event column
 		df['event'] = df['event'].apply(lambda x: self.normalize_string(x))		
@@ -396,10 +390,6 @@ class SportsClassifier(object):
 
 		print("[normalising {} data]".format(k))
 
-		# for col in ['event']:
-		# 	df = df.iloc[:200,:]
-		# 	df[col] = df[col].apply(lambda x: self.normalize_string(x))	
-
 		df = self.parallelize_dataframe(df, self.normalize_df)	
 		
 		if k == "training":
@@ -407,11 +397,12 @@ class SportsClassifier(object):
 			for col in ['event', 'venue']:
 				for st_as_lst in df[col].str.split():
 					for w in st_as_lst:
-						if w not in self.STPW:
 							self.train_dict[w] += 1
 
-			self.train_rare_words = [w for w in self.train_dict if self.train_dict[w] < 3]
+			self.train_rare_words = [w for w in self.train_dict if self.train_dict[w] == 1]
+
 			print("found {} rare words ({}% of all words in training set)...".format(len(self.train_rare_words), round(len(self.train_rare_words)/len(self.train_dict)*100.0),1))
+			
 			with open(self.train_rare_words_file, "w") as f:
 				for w in self.train_rare_words:
 					f.write("{}\n".format(w))
@@ -426,76 +417,51 @@ class SportsClassifier(object):
 
 		df.to_csv(self.TEMP_DATA_DIR + "normalised_" + k + "_df.csv")
 
-		print("normalisation completed.")
-			
 		return df
 
-	def get_sports_word_features(self, st):
+	def getf_special_word(self, st):
 
-		res_dict = defaultdict()
+		res_dict = defaultdict()  # to keep collected features in
 
-		st_words = set(st.lower().split())  # only distinct words
+		for sport in self.team_name_words:
 
-		for sport in self.sport_words:
-			in_both_sets = set(self.sport_words[sport]) & st_words
-			if len(in_both_sets):
-				res_dict[str(len(in_both_sets)) + "_[" + sport.upper() + "]_word"] = 1
+			in_both_sets = set(self.team_name_words[sport]) & set(st.lower().split()) 
+
+			if in_both_sets:
+
+				res_dict["@" + sport.upper() + "_team_words"] = len(in_both_sets)
+
+		for sport in self.comp_name_words:
+
+			in_both_sets = set(self.comp_name_words[sport]) & set(st.lower().split()) 
+
+			if in_both_sets:
+
+				res_dict["@" + sport.upper() + "_comp_words"] = len(in_both_sets)
 
 		return res_dict
 
-	def get__horse_racing_comp_word_features(self,st):
+
+	def getf_1g(self, st):
+
+		c = Counter(st.split())
+
+		return {"@word_[{}]".format(w.strip()): c[w] for w in c}
+
+	def getf_2g(self, st):
 
 		res_dict = defaultdict(int)
-		st_words = set(st.lower().split())  # only distinct words
-		in_both_sets = set(self.horse_racing_comp_words) & st_words
-
-		if len(in_both_sets):  # if any suburb names happen to be in this string
-			res_dict[str(len(in_both_sets)) + "_HORSE_RACING_COMP_WORDS"] = 1
-		
-		return res_dict
-
-
-	def get_1g_features(self, st):
-
-		return {"word_[{}]".format(w.strip()): 1 for w in st.lower().split()}
-
-	def get_2g_features(self, st):
 		
 		str_list = st.split()
-
-		res_dict = defaultdict(int)
 		
 		if len(str_list) > 1:
 			for i, w in enumerate(str_list):
 				if i > 0:
-					res_dict[("words_[{}]->[{}]").format(str_list[i-1], w)] = 1
+					res_dict[("@words_[{}]->[{}]").format(str_list[i-1], w)] += 1
 
 		return res_dict
 
-	def get_3g_features(self, st, nm):
-		"""
-		IN: string
-		OUT: a dictionary containing 3-gram features extracted from the string
-		"""
-		str_list = st.split()
-
-		return {("words_[{}]->[{}]->[{}]_in_" + nm).format(str_list[i-2],str_list[i-1],w): 1  for i, w in enumerate(str_list) if (len(str_list) > 2 and i > 1)}
-
-	def get_suburb_features(self, st):
-
-		res_dict = defaultdict(int)
-
-		st_words = set(st.lower().split())  # only distinct words
-
-		in_both_sets = set(self.AUS_SUBURBS) & st_words
-
-		if len(in_both_sets):  # if any suburb names happen to be in this string
-			res_dict[str(len(in_both_sets)) + "_AUSSIE_SUBURBS"] = 1
-		
-		return res_dict
-
-
-	def get_event_timeofday_feature(self, hour):
+	def getf_timeofday(self, hour):
 
 		if (int(hour) >= 1) and (int(hour) < 12):
 			time_of_day = "morning"
@@ -504,25 +470,11 @@ class SportsClassifier(object):
 		else:
 			time_of_day = "evening"
 
-		return {"event_time_[{}]".format(time_of_day): 1}
+		return {"event_timeofday_[{}]".format(time_of_day): 1}
 
-	def get_aus_team_nickname_features(self, st):
 
-		
-		res_doc = defaultdict(int)
-
-		for nick_line in self.AUS_TEAM_NICKS:
-			if nick_line:
-
-				nick, sport = list(map(str.strip, nick_line.split("-")))
-
-				if re.search("(?<!\w)" + nick + "(?!\w+)", st):  # if found nickname
-					res_doc[sport.upper() + "_nick"] = 1
-
-		return res_doc
-
-	
-	def extract_features_from_data(self, d, k="training"):
+	@run_and_time
+	def get_features(self, d, k="training"):
 
 		"""
 		extracts features from a data frame
@@ -530,120 +482,71 @@ class SportsClassifier(object):
 		
 		di = defaultdict(lambda: defaultdict(int))  # will keep extracted features here	
 		
-		print("extracting features...")
-		with progressbar.ProgressBar(max_value=d.shape[0]) as progress:
+		print("[extracting {} features]".format(k))
 
-			for i, s in enumerate(d.itertuples()):  #  go by rows
-				
-				pk = s.Index  # recall that pks are data frame index
-				
-				di[pk].update(self.get_sports_word_features(s.event + " " + s.venue))
-				di[pk].update(self.get__horse_racing_comp_word_features(s.event + " " + s.venue))
-				di[pk].update(self.get_event_timeofday_feature(s.hour))
-				di[pk].update(self.get_aus_team_nickname_features(s.event))
-				di[pk].update(self.get_suburb_features(s.event + " " + s.venue))
-				di[pk].update(self.get_1g_features(s.event))
-				di[pk].update(self.get_2g_features(s.event))
 
-				if i%100 == 0 or i == d.shape[0]:
-					progress.update(i)
+		for i, s in enumerate(d.itertuples()):  #  go by rows
+			
+			pk = s.Index  # recall that pks are data frame index
+			
+			di[pk].update(self.getf_special_word(s.event))
+			di[pk].update(self.getf_timeofday(s.hour))
+			di[pk].update(self.getf_1g(s.event))
+			di[pk].update(self.getf_2g(s.event))
 	
-
-		
 		# merge the original data frame with a new one created from extracted features to make one feature data frame
 
-		fdf = pd.concat([d[d.columns.difference(["event", "venue", "hour"])], pd.DataFrame.from_dict(di, orient='index')], axis=1, join_axes=[d.index]).fillna(0)
+		fdf = pd.concat([d[d.columns.difference(["event", "venue", "hour"])], 
+							pd.DataFrame.from_dict(di, orient='index')], axis=1, join_axes=[d.index]).fillna(0)
 			
 		if k == "training":
+
 			self.model_feature_names = list(fdf)
+			print("model features...{}...ok".format(len(self.model_feature_names)))
+
 			with open(self.feature_file, "w") as f:
 				for feature in self.model_feature_names:
 					f.write("{}\n".format(feature))
 
-			print("model features...{}...ok".format(len(self.model_feature_names)))
 		elif k == "testing":
 			"""
 			now we ignore features that are not in self.model_feature_names () 
 			"""
-			print("fdf.shape",fdf.shape)
+
 			fdf.drop(fdf.columns.difference(self.model_feature_names), axis=1, inplace=True)
-			print("dropped some columns, now testing shape", fdf.shape)
 
 			for fch in self.model_feature_names:
 				if fch not in fdf.columns:
 					fdf[fch] = 0
 
-		return  fdf
-	
+		return  fdf   # returns new data frame that has feature columns attached
 
-	# def train_and_test(self):
+	def run_classifier(self):
 
-		print("training random forest...", end="")
-
-		# forest = RandomForestClassifier(class_weight="auto")
-
-		# forest.fit(self.train_nofeatures[self.model_feature_names], self.train_y)
-
-		# print("ok")
-
-		# print("predicting on testig data..", end="")
-		# y1 = forest.predict(self.test_nofeatures[self.model_feature_names])
-		# print("ok")
-
-		# # df_with_prediction = pd.concat([self.test_nofeatures, pd.Series(y1, index=self.test_y.index)], axis=1, ignore_index=True)
+		from sklearn.multiclass import OneVsRestClassifier
+		from sklearn.svm import LinearSVC
+		from sklearn.metrics import accuracy_score
 		
-		# # df_with_prediction.to_csv("kuki.csv")
-		# print("training accuracy: {}".format(round(accuracy_score(self.train_y,forest.predict(self.train_nofeatures[self.model_feature_names])),2)))
-		# print("accuracy: {}".format(round(accuracy_score(self.test_y,y1),2)))
+		classifier = OneVsRestClassifier(LinearSVC(random_state=0), n_jobs=4)
+		classifier.fit(self.train, self.y_train)
 
-		
-		# imps = zip(list(train_df), clf.feature_importances_)   svm.LinearSVC()
-		
+		y_pred = classifier.predict(self.test)
+		print("acuracy:", accuracy_score(self.y_test, y_pred))
 
 
 if __name__ == '__main__':
 
-	
-
-
 	# initialize classifier
 	cl = SportsClassifier()
+	
 	cl.read_data()
-	# print(cl.normalize_string(" sydney swans vs.  brisbane roar 19pm sydney f. c. with John   hi Melbourne Storm! played in the resimax stakes... ben decided to perform at the a-league show as well as holden cup "))
-
-	#sys.exit()
-
-	# tlen = 0
-	# for sport in cl.pks_dic:
-	# 	tlen += len(cl.pks_dic[sport])
-	# print("total pks:",tlen)
 
 	cl.create_train_test()
 
-	t0 = time.time()
-	cl.train_nofeatures = cl.normalize_data(cl.train_nofeatures)
-	t1 = time.time()
+	cl.train = cl.get_features(cl.normalize_data(cl.train_nofeatures, k="training"))
+	cl.test = cl.get_features(cl.normalize_data(cl.test_nofeatures, k="testing"))
 
-	sys.exit()
-
-	X_train = cl.extract_features_from_data(cl.train_nofeatures)
-
-	X_test = cl.extract_features_from_data(cl.test_nofeatures, k="testing")
-
-	print("training SVC..")
-	t0 = time.time()
-	clf = svm.SVC()
-
-	clf.fit(X_train, cl.y_train)
-	t1 = time.time()
-	
-	print("elapsed time: {} minutes".format(round((t1-t0)/60,1)))
-	print("done. now predicting...")
-
-	y1 = clf.predict(X_test)
-
-	print("training accuracy: {}".format(round(accuracy_score(cl.y_train,clf.predict(X_train)),2)))
-	print("accuracy: {}".format(round(accuracy_score(cl.y_test,y1),2)))
+	cl.run_classifier()
 
 
 

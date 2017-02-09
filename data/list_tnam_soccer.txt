@@ -5,3 +5,5 @@ tnam_scotland_premiership.txt
 tnam_usa_mls.txt
 tnam_australia_npl.txt
 tnam_japan_j1.txt
+tnam_korea_k_league.txt
+tnam_spain_primera.txt

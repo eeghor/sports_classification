@@ -1,4 +1,5 @@
 national rugby league
+nrl
 ron massey cup
 bundaberg red cup
 jim beam cup
@@ -10,4 +11,5 @@ intrust super premiership nsw
 new south wales cup
 nswrl premier league
 holden cup
+telstra premiership
 holden state of origin
