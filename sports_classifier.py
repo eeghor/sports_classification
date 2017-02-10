@@ -448,8 +448,7 @@ class SportsClassifier(object):
 	def getf_isvs(self, st):
 
 		if {"vs","vs.","v"} & set(st.split()):
-			return 
-				{"@word_[vs]_present": 1}
+			return {"@word_[vs]_present": 1}
 
 	def getf_timeofday(self, hour):
 
