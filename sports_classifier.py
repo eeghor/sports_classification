@@ -445,6 +445,12 @@ class SportsClassifier(object):
 
 		return res_dict
 
+	def getf_isvs(self, st):
+
+		if {"vs","vs.","v"} & set(st.split()):
+			return 
+				{"@word_[vs]_present": 1}
+
 	def getf_timeofday(self, hour):
 
 		if (int(hour) >= 1) and (int(hour) < 12):
@@ -477,6 +483,7 @@ class SportsClassifier(object):
 			di[pk].update(self.getf_timeofday(s.hour))
 			di[pk].update(self.getf_1g(s.event))
 			di[pk].update(self.getf_2g(s.event))
+			di[pk].update(self.getf_isvs(s.event))
 	
 		# merge the original data frame with a new one created from extracted features to make one feature data frame
 
