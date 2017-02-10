@@ -21,20 +21,19 @@ from sklearn.ensemble import BaggingClassifier, GradientBoostingClassifier
 
 import numpy as np
 import sys
-import dill as pickle
 from sklearn import svm
 from sklearn.decomposition import PCA
 #import progressbar
 # see https://pypi.python.org/pypi/multiprocessing_on_dill
 from multiprocessing_on_dill import Pool
-#from functools import wraps
+from functools import wraps
 
 
 from sklearn.model_selection import train_test_split
 
 def run_and_time(method):
 
-	#@wraps(method)
+	@wraps(method)
 	
 	def wrap_func(self,*method_args,**kwargs):
 		t_start = time.time()
@@ -47,6 +46,7 @@ def run_and_time(method):
 		else:
 			form_str = "{} elapsed time {:.0f} m {:.0f} s".format(u"\u2713", t_elapsed//60, t_elapsed%60)
 		print(form_str)
+
 		return res
 
 	return wrap_func
@@ -80,7 +80,7 @@ class SportsClassifier(object):
 
 		self.DATA_DIR = "data/"
 		self.data_file = self.DATA_DIR + "data.csv"
-		self.train_target_file = self.DATA_DIR + "data_train_t.csv"
+		self.train_target_file = self.TEMP_DATA_DIR + "data_train_t.csv"
 		self.test_target_file = self.DATA_DIR + "data_test_t.csv" 
 		self.feature_file = self.DATA_DIR + "model_features.txt"
 		
@@ -90,9 +90,11 @@ class SportsClassifier(object):
 		self.TEMP_DATA_DIR = "temp_data/"	
 		self.train_nofeatures_file = self.TEMP_DATA_DIR + "data_train_nofeatures.csv" 
 		self.test_nofeatures_file = self.TEMP_DATA_DIR + "data_test_nofeatures.csv" 
-		self.train_rare_words_file = self.TEMP_DATA_DIR  + "train_rare_words.txt"
+		self.words_once_file = self.TEMP_DATA_DIR  + "train_rare_words.txt"
+		self.predictions_test_file = self.TEMP_DATA_DIR  + "predictions_on_test.csv"
 
 		self.data_df = pd.DataFrame()
+		
 		self.train = pd.DataFrame()  # training data w features
 		self.test = pd.DataFrame()  # testing data w features
 
@@ -106,15 +108,21 @@ class SportsClassifier(object):
 		self.train_dict = defaultdict(int)
 		# model feature names - the same as the features extracted from the training set 
 		self.model_feature_names = []
+		self.words_once = []
+		self.train_word_list = []
 
 		self.pks_dic = {}
 		# all pk files MUST be called pks_[SPORT].txt!
 		self.pks_fl_dic = {sport: self.PKS_DIR + "pks_" + sport + ".txt" for sport in self.sports} 
 
-		self.AUS_THEATRE_COMPANIES = frozenset()
-		self.AUS_OPERA_COMPANIES = frozenset()
-		self.NAMES_M = self.NAMES_F = self.STPW = self.AUS_SUBURBS = self.COUNTRIES = self.PERFORMERS = frozenset()
+		self.AUS_THEATRE_COMPANIES = self.AUS_OPERA_COMPANIES = self.NAMES_M = self.NAMES_F = \
+		self.STPW = self.AUS_SUBURBS = self.COUNTRIES = self.PERFORMERS = frozenset()
 
+	def __list2file(self, filename, lst):
+
+		with open(filename, "w") as f:
+			for w in lst:
+				f.write("{}\n".format(w))
 
 	def __read2list(self,filename, msg):
 			"""
@@ -125,14 +133,6 @@ class SportsClassifier(object):
 				lst = [line.strip() for line in f if line.strip()]
 			print(msg + "...{}...ok".format(len(lst)))
 			return frozenset(lst)
-
-	# def run_and_time(self, *argv):
-
-	# 	t_start = time.time()
-	# 	def wrap_func(some_function):
-	# 		return some_function(*argv)
-	# 	return wrap_func
-
 
 	@run_and_time
 	def read_data(self):
@@ -151,14 +151,6 @@ class SportsClassifier(object):
 		# load artist/musician list (from www.rollingstone.com)
 		self.PERFORMERS = self.__read2list("performer_list.txt", "artists")
 		self.COUNTRIES = self.__read2list("countries.txt", "world countries")
-		# # rugby union competitions
-		# self.COMPS_RU = self.__read2list("cnam_rugby_union.txt", "rugby union competitions")
-		# self.COMPS_NRL = self.__read2list("cnam_nrl.txt", "rugby league competitions")
-		# self.COMPS_TENNIS = self.__read2list("cnam_tennis.txt", "tennis competitions")
-		# self.COMPS_SOCCER = self.__read2list("cnam_soccer.txt", "soccer competitions")
-		# # horse racing competitions
-		# self.COMPS_HORSE_RACING = self.__read2list("cnam_horse_racing.txt", "horse racing competitions")
-		
 		# dictionary to keep all sports primary keys (pks) 
 		self.pks_dic = {sport: pd.read_csv(self.pks_fl_dic[sport], sep="\n", dtype=np.int32).drop_duplicates().ix[:,0].tolist() for sport in self.pks_fl_dic}
 		
@@ -199,9 +191,7 @@ class SportsClassifier(object):
 		create a dict of team names like {'soccer': {'england_championship': ['brighton & hove albion', 'newcastle united', 'reading',..],
 											'australia_a_league': ['sydney fc', 'brisbane roar',..],..},
 								  'rugby_union': {...}, ..}
-		"""
-
-		
+		"""	
 
 		for team_sport in self.team_sports:
 			# read the available team names to lists
@@ -223,9 +213,7 @@ class SportsClassifier(object):
 
 		"""
 		create venue names just like the team names above
-		"""
-
-		
+		"""	
 
 		for team_sport in self.team_sports:
 			# read the available team names to lists
@@ -236,12 +224,9 @@ class SportsClassifier(object):
 								self.venue_names[team_sport][re.search("(?<=" + "vnam_" + ")\w+(?=.txt)",fl).group(0)] = \
 																			[line.strip() for line in f if line.strip()]
 
-
 		"""
 		create a dictionary of competition names like {"soccer": ["a-league", "asian cup",..], "nrl": [..]}
-		"""																	
-
-		
+		"""																		
 
 		for sport in self.sports:
 			if sport != "nonsport":
@@ -263,13 +248,12 @@ class SportsClassifier(object):
 		self.train_nofeatures, self.test_nofeatures, self.y_train, self.y_test = train_test_split(self.data_df.loc[:, "event venue month weekday hour".split()], self.data_df.sport, test_size=0.3, 
 																stratify = self.data_df.sport, random_state=113)
 		
-		print("training data shape...{}x{}".format(*self.train_nofeatures.shape))
 		print("saving training data (no features) to {}...".format(self.train_nofeatures_file), end="")
 		
 		pd.concat([self.train_nofeatures, self.y_train.apply(lambda _: self.sports_decoded[_])], axis=1, join="inner").to_csv(self.train_nofeatures_file)
 		
 		print("ok")
-		print("testing data shape...{}x{}".format(*self.test_nofeatures.shape))
+		
 		print("saving testing data set to {}...".format(self.test_nofeatures_file), end="")
 		self.test_nofeatures.to_csv(self.test_nofeatures_file)
 		self.y_test.to_csv(self.test_target_file)
@@ -327,7 +311,6 @@ class SportsClassifier(object):
 			nick, sport = list(map(str.strip, n.split("-")))
 			st = self.__prelabel_from_list(st, [nick], "_" + sport.upper() + "_TEAM_", 1)
 
-
 		for sport in self.comp_names:
 			st = self.__prelabel_from_list(st, self.comp_names[sport], "_" + sport.upper() + "_COMPETITION_", 2)
 
@@ -358,17 +341,10 @@ class SportsClassifier(object):
 
 	def normalize_df(self, df):
 
-		# do don't do much to the event column, just make it lower case
 		df["event"] = df["event"].str.lower().str.split().str.join(" ")
 		df["event"] = df["event"].str.replace("."," ")
-
 		df["venue"] = df["venue"].str.lower().str.split().str.join(" ")
-		# not everything is lower case and with only 1 white space between words
-
-		# remove venue from event
 		df["event"] = [_event.replace(_venue,"") for _event, _venue in zip(df["event"],df["venue"])]
-
-		# process the event column
 		df['event'] = df['event'].apply(lambda x: self.normalize_string(x))		
 
 		return df
@@ -376,9 +352,10 @@ class SportsClassifier(object):
 
 	def parallelize_dataframe(self, df, func):
 
-   		df_split = np.array_split(df, 4)
-   		pool = Pool(4)
-   		df = pd.concat(pool.map(func, df_split))
+   		df_split = np.array_split(df, 1)
+   		pool = Pool(1)
+   		rr = pool.map(func, df_split)
+   		df = pd.concat(rr)
    		pool.close()
    		pool.join()
 
@@ -386,12 +363,19 @@ class SportsClassifier(object):
 
 
 	@run_and_time
-	def normalize_data(self, df, k="training"):
+	def normalize_data(self, df, k, para="no"):
 
 		print("[normalising {} data]".format(k))
 
-		df = self.parallelize_dataframe(df, self.normalize_df)	
-		
+		if para == "yes":
+			print("note: you chose to run normalisation in parallel")
+			df = self.parallelize_dataframe(df, self.normalize_df)	
+		elif para == "no":
+			df = self.normalize_df(df)
+			print("note: you chose not to run normalisation in parallel")
+		else:
+			sys.exit("please, choose yes or no regarding the parallelisation option.")
+
 		if k == "training":
 
 			for col in ['event', 'venue']:
@@ -399,18 +383,18 @@ class SportsClassifier(object):
 					for w in st_as_lst:
 							self.train_dict[w] += 1
 
-			self.train_rare_words = [w for w in self.train_dict if self.train_dict[w] == 1]
+			self.words_once = [w for w in self.train_dict if self.train_dict[w] == 1]
 
-			print("found {} rare words ({}% of all words in training set)...".format(len(self.train_rare_words), round(len(self.train_rare_words)/len(self.train_dict)*100.0),1))
+			print("found {} words that occurr only once ({}%)...".format(len(self.words_once), round(len(self.words_once)/len(self.train_dict)*100.0),1))
 			
-			with open(self.train_rare_words_file, "w") as f:
-				for w in self.train_rare_words:
-					f.write("{}\n".format(w))
+			self.__list2file(self.words_once_file, self.words_once)
 
-			self.train_word_list = [w for w in self.train_dict if w not in self.train_rare_words]
+			self.train_word_list = [w for w in self.train_dict if w not in self.words_once]
 
 			print("words to be used to extract features: {}".format(len(self.train_word_list)))
-
+		else:
+			pass
+		
 		# only leave words that made it into self.train_word_list for ANY data frame, not just training
 		for col in ['event', 'venue']:
 			df[col] = df[col].apply(lambda x: " ".join([w for w in x.split() if  w in self.train_word_list]))
@@ -474,7 +458,7 @@ class SportsClassifier(object):
 
 
 	@run_and_time
-	def get_features(self, d, k="training"):
+	def get_features(self, d, k):
 
 		"""
 		extracts features from a data frame
@@ -502,26 +486,24 @@ class SportsClassifier(object):
 		if k == "training":
 
 			self.model_feature_names = list(fdf)
-			print("model features...{}...ok".format(len(self.model_feature_names)))
-
-			with open(self.feature_file, "w") as f:
-				for feature in self.model_feature_names:
-					f.write("{}\n".format(feature))
+			print("total model features...{}...ok".format(len(self.model_feature_names)))
+			self.__list2file(self.feature_file, self.model_feature_names)
 
 		elif k == "testing":
 			"""
-			now we ignore features that are not in self.model_feature_names () 
+			now we ignore features that are not in self.model_feature_names
 			"""
-
 			fdf.drop(fdf.columns.difference(self.model_feature_names), axis=1, inplace=True)
 
 			for fch in self.model_feature_names:
 				if fch not in fdf.columns:
 					fdf[fch] = 0
-
 		return  fdf   # returns new data frame that has feature columns attached
 
+	@run_and_time
 	def run_classifier(self):
+
+		print("[training model]")
 
 		from sklearn.multiclass import OneVsRestClassifier
 		from sklearn.svm import LinearSVC
@@ -531,7 +513,11 @@ class SportsClassifier(object):
 		classifier.fit(self.train, self.y_train)
 
 		y_pred = classifier.predict(self.test)
-		print("acuracy:", accuracy_score(self.y_test, y_pred))
+
+		# save the predictions to file
+		pd.concat([self.test_nofeatures, pd.Series(y_pred.apply(lambda _: self.sports_decoded[_]), index=self.test_nofeatures.index, name="sport_p")], axis=1, join="inner").to_csv(self.predictions_test_file)
+
+		print("accuracy:", round(accuracy_score(self.y_test, y_pred),2))
 
 
 if __name__ == '__main__':
@@ -543,8 +529,8 @@ if __name__ == '__main__':
 
 	cl.create_train_test()
 
-	cl.train = cl.get_features(cl.normalize_data(cl.train_nofeatures, k="training"))
-	cl.test = cl.get_features(cl.normalize_data(cl.test_nofeatures, k="testing"))
+	cl.train = cl.get_features(cl.normalize_data(cl.train_nofeatures, "training"), "training")
+	cl.test = cl.get_features(cl.normalize_data(cl.test_nofeatures, "testing"), "testing")
 
 	cl.run_classifier()
 
