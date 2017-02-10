@@ -80,7 +80,6 @@ class SportsClassifier(object):
 
 		self.DATA_DIR = "data/"
 		self.data_file = self.DATA_DIR + "data.csv"
-		self.train_target_file = self.TEMP_DATA_DIR + "data_train_t.csv"
 		self.test_target_file = self.DATA_DIR + "data_test_t.csv" 
 		self.feature_file = self.DATA_DIR + "model_features.txt"
 		
@@ -92,6 +91,7 @@ class SportsClassifier(object):
 		self.test_nofeatures_file = self.TEMP_DATA_DIR + "data_test_nofeatures.csv" 
 		self.words_once_file = self.TEMP_DATA_DIR  + "train_rare_words.txt"
 		self.predictions_test_file = self.TEMP_DATA_DIR  + "predictions_on_test.csv"
+		self.train_target_file = self.TEMP_DATA_DIR + "data_train_t.csv"
 
 		self.data_df = pd.DataFrame()
 		
